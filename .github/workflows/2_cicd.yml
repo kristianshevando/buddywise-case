@@ -1,0 +1,124 @@
+name: CI/CD Pipeline - Universal Build, Test & Push
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies (Backend)
+        working-directory: 1_docker/todo-application-main/backend
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install --upgrade greenlet pytest
+          pip install -r requirements.txt
+
+      - name: Verify pytest installation
+        working-directory: 1_docker/todo-application-main/backend
+        run: |
+          source venv/bin/activate
+          pytest --version
+
+      - name: Run Backend Tests
+        working-directory: 1_docker/todo-application-main/backend
+        run: |
+          source venv/bin/activate
+          PYTHONPATH=$(pwd) pytest tests --maxfail=5 --disable-warnings
+
+      - name: Install dependencies (Frontend)
+        working-directory: 1_docker/todo-application-main/frontend/todo
+        run: npm install
+
+      - name: Run Frontend Tests
+        working-directory: 1_docker/todo-application-main/frontend/todo
+        run: npm test -- --watchAll=false --passWithNoTests
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set registry variables
+        run: |
+          if [ "${{ vars.USE_ACR }}" == "true" ]; then
+            echo "REGISTRY=${{ secrets.AZURE_ACR_LOGIN_SERVER }}" >> $GITHUB_ENV
+            echo "USERNAME=${{ secrets.AZURE_ACR_USERNAME }}" >> $GITHUB_ENV
+            echo "PASSWORD=${{ secrets.AZURE_ACR_PASSWORD }}" >> $GITHUB_ENV
+          else
+            echo "REGISTRY=docker.io" >> $GITHUB_ENV
+            echo "USERNAME=${{ secrets.DOCKER_USERNAME }}" >> $GITHUB_ENV
+            echo "PASSWORD=${{ secrets.DOCKER_PASSWORD }}" >> $GITHUB_ENV
+          fi
+
+      - name: Log in to Registry
+        run: echo $PASSWORD | docker login $REGISTRY -u $USERNAME --password-stdin
+
+      - name: Build Backend Image
+        working-directory: 1_docker/todo-application-main/backend
+        run: docker build -t $REGISTRY/$USERNAME/todo-backend:${{ github.sha }} .
+
+      - name: Test Backend Container
+        run: |
+          docker run -d --name backend -p 8000:8000 $REGISTRY/$USERNAME/todo-backend:${{ github.sha }}
+
+          TIMER=0
+          until [ "$(docker inspect --format='{{.State.Health.Status}}' backend)" == "healthy" ]; do
+            if [ "$TIMER" -ge 60 ]; then
+              echo "Backend healthcheck timeout!"
+              docker logs backend
+              exit 1
+            fi
+            echo "Waiting for backend..."
+            sleep 2
+            TIMER=$((TIMER + 2))
+          done
+
+          curl --fail http://localhost:8000/docs || (echo "Backend container test failed!" && exit 1)
+          docker stop backend && docker rm backend
+
+      - name: Push Backend Image
+        working-directory: 1_docker/todo-application-main/backend
+        run: docker push $REGISTRY/$USERNAME/todo-backend:${{ github.sha }}
+
+      - name: Build Frontend Image
+        working-directory: 1_docker/todo-application-main/frontend
+        run: docker build -t $REGISTRY/$USERNAME/todo-frontend:${{ github.sha }} .
+
+      - name: Test Frontend Container
+        run: |
+          docker run -d --name frontend -p 3000:3000 $REGISTRY/$USERNAME/todo-frontend:${{ github.sha }}
+
+          TIMER=0
+          until [ "$(docker inspect --format='{{.State.Health.Status}}' frontend)" == "healthy" ]; do
+            if [ "$TIMER" -ge 60 ]; then
+              echo "Frontend healthcheck timeout!"
+              docker logs frontend
+              exit 1
+            fi
+            echo "Waiting for frontend..."
+            sleep 2
+            TIMER=$((TIMER + 2))
+          done
+
+          curl --fail http://localhost:3000 || (echo "Frontend container test failed!" && exit 1)
+          docker stop frontend && docker rm frontend
+
+      - name: Push Frontend Image
+        working-directory: 1_docker/todo-application-main/frontend
+        run: docker push $REGISTRY/$USERNAME/todo-frontend:${{ github.sha }}

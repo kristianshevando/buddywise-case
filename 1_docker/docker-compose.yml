@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: 
+      context: ./todo-application-main/backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    networks:
+      - todo-app-network
+
+  frontend:
+    build: 
+      context: ./todo-application-main/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - todo-app-network
+    depends_on:
+      - backend
+
+networks:
+  todo-app-network:

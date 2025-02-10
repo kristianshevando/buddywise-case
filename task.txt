@@ -1,0 +1,44 @@
+DevOps Engineer Take-Home Assignment: Enhancing Your Cloud Deployment Skills
+
+Introduction
+    This assignment is designed to showcase your capabilities in software development, containerization, continuous integration and deployment (CI/CD), and cloud deployment, with an emphasis on scalability and security. It involves preparing an existing application for deployment and ensuring it is ready for a cloud environment.
+
+Assignment Objectives
+
+    1. Preparing the Application for Deployment
+        Overview
+            Your first task involves cloning and getting acquainted with the project available at [Buddywise/todo-application](https://github.com/Buddywise/todo-application).
+        Tasks
+            - Containerization:
+                - Craft a Dockerfile for both the backend and frontend components.
+                - Write a docker-compose.yml to make the whole application available to use locally.
+                - Provide step-by-step instructions for using Docker Compose to build and run the application locally.
+
+    2. Automating the CI/CD Pipeline
+        Overview
+            Set up an automated CI/CD pipeline to streamline the deployment processes.
+        Tasks
+            - Continuous Deployment:
+                - Configure automated deployment to a container registry using GitHub Actions, to be executed when changes are successfully merged into the main branch.
+    
+    3. Designing for Production in the Cloud
+        Overview
+            Plan the deployment of the application in a production environment with a focus on scalability and security.    
+        Tasks
+            - Create a system architecture diagram for a cloud-based production setup, emphasizing scalable and secure configurations. Consider adding additional capabilities you see fit for production, i.e. authentication
+            - In your diagram make sure to add the network setup, including Virtual Networks (VNets), subnets, and security rules for traffic management.
+
+    4. Demonstrating Kubernetes and/or Terraform Expertise
+        Overview
+            As an additional task to showcase your Kubernetes or Terraform skills, we invite you to extend the project with an infrastructure-as-code approach or container orchestration solution.
+        Tasks
+            - Kubernetes Deployment:
+                - If you're demonstrating Kubernetes skills, include YAML configuration files for the deployment and services, and describe how to manage scalability and ensure high availability within the cluster.
+            - Terraform Infrastructure:
+                - If showcasing Terraform skills, write Terraform scripts to automate the provisioning of the necessary cloud infrastructure for the application. Describe how to use these scripts to set up and tear down the environment, ensuring your setup supports scalability and security.
+
+Submission Guidelines
+    - Ensure your repository is well-organized and includes a README with instructions on how to execute the Docker containers.
+    - Share a link to the public github repo.
+    - Verify that the CI/CD pipeline operates correctly for changes under the defined conditions.
+    - Add your production system architecture and Kubernetes/Terraform configurations into this repo as well.
